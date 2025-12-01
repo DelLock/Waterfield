@@ -1,36 +1,146 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.Threading.Tasks;
 
 namespace Battleship
 {
     public partial class Form1 : Form
     {
-        private enum GameState { Player1Turn, Player2Turn, ComputerTurn, GameOver }
-        private Board playerBoard = new Board();
-        private Board opponentBoard = new Board();
-        private Button[,] playerButtons = new Button[10, 10];
-        private Button[,] opponentButtons = new Button[10, 10];
+        private enum GameState { PlayerTurn, EnemyTurn, GameOver }
+        private Board myBoard = new Board();
+        private Board enemyBoard = new Board();
+        private Button[,] myButtons = new Button[10, 10];
+        private Button[,] enemyButtons = new Button[10, 10];
         private GameState state;
-        private bool isTwoPlayers = false;
+        private NetworkManager _network;
+        private bool _isOnline;
+        private bool _isHost;
+        private bool _isMyTurn = true;
+        private object lastMoveTag;
 
-        public Form1()
+        // Конструктор с параметрами
+        public Form1(bool isTwoPlayers, bool isOnline, string ip, bool isHost)
         {
-            InitializeComponent();
-            SetupGamePanels();
-            NewGame();
+            InitializeComponent(); // ⬅️ ОБЯЗАТЕЛЬНО вызываем!
+            _isOnline = isOnline;
+            _isHost = isHost;
+
+            // Устанавливаем начальный текст статуса (statusLabel уже существует!)
+            statusLabel.Text = "Инициализация...";
+
+            if (_isOnline)
+            {
+                Text = _isHost ? "Морской бой — Хост" : "Морской бой — Клиент";
+                Task.Run(() => SetupNetwork(ip));
+            }
+            else
+            {
+                Text = "Морской бой — Против компьютера";
+                NewGame();
+            }
 
             btnNewGame.Click += (s, e) => NewGame();
-            chkTwoPlayers.CheckedChanged += (s, e) => isTwoPlayers = chkTwoPlayers.Checked;
+        }
+
+        private async void SetupNetwork(string ip)
+        {
+            try
+            {
+                Invoke((MethodInvoker)delegate { statusLabel.Text = _isHost ? "Ожидание подключения..." : $"Подключение к {ip}..."; });
+
+                _network = new NetworkManager(ip, _isHost);
+                _network.OnMessageReceived += ProcessNetworkMessage;
+
+                myBoard.PlaceShipsRandomly();
+                await Task.Delay(500);
+
+                _isMyTurn = _isHost; // Хост ходит первым
+                Invoke((MethodInvoker)delegate
+                {
+                    SetupGamePanels();
+                    statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
+                });
+            }
+            catch (Exception ex)
+            {
+                Invoke((MethodInvoker)delegate
+                {
+                    MessageBox.Show($"Ошибка подключения: {ex.Message}");
+                    Close();
+                });
+            }
+        }
+
+        private void ProcessNetworkMessage(string message)
+        {
+            if (message.StartsWith("MOVE:"))
+            {
+                string[] coords = message.Substring(5).Split(',');
+                int x = int.Parse(coords[0]);
+                int y = int.Parse(coords[1]);
+
+                bool hit = myBoard.FireAt(x, y);
+                _network?.SendResult(hit);
+                UpdateUI();
+
+                if (myBoard.IsAllShipsSunk())
+                {
+                    EndGame(false);
+                    return;
+                }
+
+                _isMyTurn = !hit;
+                Invoke((MethodInvoker)delegate
+                {
+                    statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
+                });
+            }
+            else if (message.StartsWith("RESULT:"))
+            {
+                bool hit = bool.Parse(message.Substring(7));
+                string[] parts = lastMoveTag.ToString().Split(',');
+                int x = int.Parse(parts[0]);
+                int y = int.Parse(parts[1]);
+
+                if (hit)
+                    enemyBoard.Grid[x, y] = true; // Отмечаем попадание
+
+                _isMyTurn = hit;
+                UpdateUI();
+
+                Invoke((MethodInvoker)delegate
+                {
+                    statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
+                });
+            }
+        }
+
+        private void NewGame()
+        {
+            if (_isOnline)
+            {
+                MessageBox.Show("В онлайн-режиме новую игру можно начать только после перезапуска.");
+                return;
+            }
+
+            myBoard = new Board();
+            enemyBoard = new Board();
+            myBoard.PlaceShipsRandomly();
+            enemyBoard.PlaceShipsRandomly();
+            state = GameState.PlayerTurn;
+            _isMyTurn = true;
+            statusLabel.Text = "Ваш ход!";
+            SetupGamePanels();
         }
 
         private void SetupGamePanels()
         {
-            CreateButtonGrid(pnlPlayer, playerButtons, PlayerCellClick);
-            CreateButtonGrid(pnlOpponent, opponentButtons, OpponentCellClick);
+            CreateButtonGrid(pnlPlayer, myButtons, MyCellClick, true);
+            CreateButtonGrid(pnlOpponent, enemyButtons, EnemyCellClick, false);
         }
 
-        private void CreateButtonGrid(Panel panel, Button[,] buttons, EventHandler clickHandler)
+        private void CreateButtonGrid(Panel panel, Button[,] buttons, EventHandler clickHandler, bool isMyBoard)
         {
             panel.Controls.Clear();
             for (int i = 0; i < 10; i++)
@@ -41,7 +151,7 @@ namespace Battleship
                     {
                         Size = new Size(28, 28),
                         Location = new Point(j * 30 + 1, i * 30 + 1),
-                        Tag = new Point(j, i),
+                        Tag = isMyBoard ? null : new Point(j, i),
                         FlatStyle = FlatStyle.Flat,
                         BackColor = SystemColors.Control
                     };
@@ -53,98 +163,73 @@ namespace Battleship
             }
         }
 
-        private void NewGame()
-        {
-            playerBoard = new Board();
-            opponentBoard = new Board();
-            playerBoard.PlaceShipsRandomly();
-            opponentBoard.PlaceShipsRandomly();
-            state = GameState.Player1Turn;
-            UpdateUI();
-        }
-
         private void UpdateUI()
         {
-            // ���� ����
             for (int i = 0; i < 10; i++)
+            {
                 for (int j = 0; j < 10; j++)
                 {
-                    Button btn = playerButtons[i, j];
-                    if (playerBoard.Shots[i, j])
-                        btn.BackColor = playerBoard.Grid[i, j] ? Color.Red : Color.LightBlue;
+                    // Моё поле
+                    Button myBtn = myButtons[i, j];
+                    if (myBoard.Shots[i, j])
+                        myBtn.BackColor = myBoard.Grid[i, j] ? Color.Red : Color.LightBlue;
                     else
-                        btn.BackColor = playerBoard.Grid[i, j] ? Color.DarkGray : SystemColors.Control;
-                }
+                        myBtn.BackColor = myBoard.Grid[i, j] ? Color.DarkGray : SystemColors.Control;
 
-            // ���� ����������
-            for (int i = 0; i < 10; i++)
-                for (int j = 0; j < 10; j++)
-                {
-                    Button btn = opponentButtons[i, j];
-                    if (opponentBoard.Shots[i, j])
-                        btn.BackColor = opponentBoard.Grid[i, j] ? Color.Red : Color.LightBlue;
+                    // Поле противника
+                    Button enemyBtn = enemyButtons[i, j];
+                    if (enemyBoard.Shots[i, j])
+                        enemyBtn.BackColor = enemyBoard.Grid[i, j] ? Color.Red : Color.LightBlue;
                     else
-                        btn.BackColor = SystemColors.Control;
+                        enemyBtn.BackColor = SystemColors.Control;
                 }
+            }
         }
 
-        private void PlayerCellClick(object sender, EventArgs e) { /* ������ �������� �� ������ ���� */ }
+        private void MyCellClick(object sender, EventArgs e) { /* нельзя стрелять по своему полю */ }
 
-        private void OpponentCellClick(object sender, EventArgs e)
+        private void EnemyCellClick(object sender, EventArgs e)
         {
+            if (_isOnline && !_isMyTurn) return;
             if (state == GameState.GameOver) return;
 
-            var btn = (Button)sender;
-            var coords = (Point)btn.Tag;
-            int x = coords.Y; // ������
-            int y = coords.X; // �������
+            Button btn = (Button)sender;
+            Point coords = (Point)btn.Tag;
+            int x = coords.Y;
+            int y = coords.X;
 
-            if (isTwoPlayers && state == GameState.Player2Turn)
+            if (enemyBoard.Shots[x, y]) return;
+
+            if (_isOnline)
             {
-                // ������ ����� �������� �� ���� �������
-                if (playerBoard.Shots[x, y]) return;
-                bool hit = playerBoard.FireAt(x, y);
+                lastMoveTag = $"{x},{y}";
+                _network?.SendMove(x, y);
+                enemyBoard.Shots[x, y] = true;
+                _isMyTurn = false;
+                statusLabel.Text = "Ход противника...";
                 UpdateUI();
-                if (playerBoard.IsAllShipsSunk())
-                {
-                    MessageBox.Show("������� ����� 2!", "����� ����", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    state = GameState.GameOver;
-                }
-                else
-                {
-                    state = hit ? GameState.Player2Turn : GameState.Player1Turn;
-                }
-                return;
             }
-
-            // ������ ����� / ��������� ����
-            if ((!isTwoPlayers && state == GameState.ComputerTurn) || (isTwoPlayers && state != GameState.Player1Turn))
-                return;
-
-            if (opponentBoard.Shots[x, y]) return;
-
-            bool hitOpp = opponentBoard.FireAt(x, y);
-            UpdateUI();
-
-            if (opponentBoard.IsAllShipsSunk())
+            else
             {
-                string msg = isTwoPlayers ? "������� ����� 1!" : "�� ��������!";
-                MessageBox.Show(msg, "����� ����", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                state = GameState.GameOver;
-                return;
-            }
+                bool hit = enemyBoard.FireAt(x, y);
+                UpdateUI();
 
-            if (!hitOpp)
-            {
-                state = isTwoPlayers ? GameState.Player2Turn : GameState.ComputerTurn;
-                if (!isTwoPlayers)
+                if (enemyBoard.IsAllShipsSunk())
+                {
+                    EndGame(true);
+                    return;
+                }
+
+                if (!hit)
+                {
                     ComputerTurn();
+                }
             }
         }
 
         private void ComputerTurn()
         {
-            if (state != GameState.ComputerTurn || state == GameState.GameOver) return;
+            if (state == GameState.GameOver) return;
 
             Random rand = new Random();
             int x, y;
@@ -152,28 +237,45 @@ namespace Battleship
             {
                 x = rand.Next(10);
                 y = rand.Next(10);
-            } while (playerBoard.Shots[x, y]);
+            } while (myBoard.Shots[x, y]);
 
-            bool hit = playerBoard.FireAt(x, y);
+            bool hit = myBoard.FireAt(x, y);
             UpdateUI();
 
-            if (playerBoard.IsAllShipsSunk())
+            if (myBoard.IsAllShipsSunk())
             {
-                MessageBox.Show("������� ���������!", "����� ����", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                state = GameState.GameOver;
+                EndGame(false);
                 return;
             }
 
             if (!hit)
             {
-                state = GameState.Player1Turn;
+                state = GameState.PlayerTurn;
+                statusLabel.Text = "Ваш ход!";
             }
             else
             {
-                // �������������� ��� ��� ���������
-                System.Threading.Thread.Sleep(400);
+                // Дополнительный ход
+                System.Threading.Thread.Sleep(300);
                 ComputerTurn();
             }
+        }
+
+        private void EndGame(bool isPlayerWinner)
+        {
+            state = GameState.GameOver;
+            string message = _isOnline
+                ? (isPlayerWinner ? "Вы победили!" : "Победил противник!")
+                : (isPlayerWinner ? "Вы победили!" : "Победил компьютер!");
+
+            MessageBox.Show(message, "Конец игры", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            _network?.Disconnect();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            _network?.Disconnect();
+            base.OnFormClosing(e);
         }
     }
 }
