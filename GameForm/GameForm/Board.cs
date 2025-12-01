@@ -24,7 +24,9 @@ public class Board
         foreach (int size in shipSizes)
         {
             bool placed = false;
-            while (!placed)
+            int attempts = 0;
+
+            while (!placed && attempts < 100) // Добавляем ограничение попыток
             {
                 int x = rand.Next(10);
                 int y = rand.Next(10);
@@ -36,6 +38,16 @@ public class Board
                     TotalShipCells += size;
                     placed = true;
                 }
+                attempts++;
+            }
+
+            if (!placed)
+            {
+                // Если не удалось разместить корабль, начинаем заново
+                ClearBoard();
+                TotalShipCells = 0;
+                PlaceShipsRandomly();
+                return;
             }
         }
     }
@@ -50,20 +62,56 @@ public class Board
 
     private bool CanPlaceShip(int x, int y, int size, bool isHorizontal)
     {
-        if (isHorizontal && y + size > 10) return false;
-        if (!isHorizontal && x + size > 10) return false;
-
-        for (int dx = -1; dx <= (isHorizontal ? size : 1) + 1; dx++)
+        // Проверка выхода за границы
+        if (isHorizontal)
         {
-            for (int dy = -1; dy <= (!isHorizontal ? size : 1) + 1; dy++)
-            {
-                int checkX = x + (!isHorizontal ? dx : 0);
-                int checkY = y + (isHorizontal ? dy : 0);
+            if (y + size > 10) return false;
 
-                if (checkX >= 0 && checkX < 10 && checkY >= 0 && checkY < 10)
+            // Проверка всех клеток корабля и вокруг них
+            for (int i = 0; i < size; i++)
+            {
+                int checkY = y + i;
+
+                // Проверяем саму клетку и соседние
+                for (int dx = -1; dx <= 1; dx++)
                 {
-                    if (Grid[checkX, checkY])
-                        return false;
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        int checkX = x + dx;
+                        int checkYWithOffset = checkY + dy;
+
+                        if (checkX >= 0 && checkX < 10 && checkYWithOffset >= 0 && checkYWithOffset < 10)
+                        {
+                            if (Grid[checkX, checkYWithOffset])
+                                return false;
+                        }
+                    }
+                }
+            }
+        }
+        else
+        {
+            if (x + size > 10) return false;
+
+            // Проверка всех клеток корабля и вокруг них
+            for (int i = 0; i < size; i++)
+            {
+                int checkX = x + i;
+
+                // Проверяем саму клетку и соседние
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    for (int dy = -1; dy <= 1; dy++)
+                    {
+                        int checkXWithOffset = checkX + dx;
+                        int checkYWithOffset = y + dy;
+
+                        if (checkXWithOffset >= 0 && checkXWithOffset < 10 && checkYWithOffset >= 0 && checkYWithOffset < 10)
+                        {
+                            if (Grid[checkXWithOffset, checkYWithOffset])
+                                return false;
+                        }
+                    }
                 }
             }
         }
@@ -82,10 +130,16 @@ public class Board
 
     public bool FireAt(int x, int y)
     {
+        if (x < 0 || x >= 10 || y < 0 || y >= 10) return false;
+
         if (Shots[x, y]) return false;
         Shots[x, y] = true;
-        if (Grid[x, y]) HitCells++;
-        return Grid[x, y];
+        if (Grid[x, y])
+        {
+            HitCells++;
+            return true;
+        }
+        return false;
     }
 
     public bool IsAllShipsSunk() => HitCells >= TotalShipCells;

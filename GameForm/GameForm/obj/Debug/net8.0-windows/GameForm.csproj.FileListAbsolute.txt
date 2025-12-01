@@ -14,3 +14,6 @@ C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\refint\Ga
 C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.pdb
 C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.genruntimeconfig.cache
 C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\ref\GameForm.dll
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\Battleship.MainMenuForm.resources
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\Battleship.LobbyForm.resources
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\Battleship.OnlineMenuForm.resources

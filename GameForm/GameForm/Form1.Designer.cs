@@ -33,9 +33,8 @@
             this.pnlOpponent = new System.Windows.Forms.Panel();
             this.lblOpponent = new System.Windows.Forms.Label();
             this.btnNewGame = new System.Windows.Forms.Button();
-            this.chkTwoPlayers = new System.Windows.Forms.CheckBox();
+            this.statusLabel = new System.Windows.Forms.Label();
             this.SuspendLayout();
-
             // 
             // pnlPlayer
             // 
@@ -44,7 +43,6 @@
             this.pnlPlayer.Name = "pnlPlayer";
             this.pnlPlayer.Size = new System.Drawing.Size(300, 300);
             this.pnlPlayer.TabIndex = 0;
-
             // 
             // lblPlayer
             // 
@@ -55,7 +53,6 @@
             this.lblPlayer.Size = new System.Drawing.Size(79, 15);
             this.lblPlayer.TabIndex = 1;
             this.lblPlayer.Text = "Ваше поле";
-
             // 
             // pnlOpponent
             // 
@@ -64,7 +61,6 @@
             this.pnlOpponent.Name = "pnlOpponent";
             this.pnlOpponent.Size = new System.Drawing.Size(300, 300);
             this.pnlOpponent.TabIndex = 2;
-
             // 
             // lblOpponent
             // 
@@ -75,7 +71,6 @@
             this.lblOpponent.Size = new System.Drawing.Size(123, 15);
             this.lblOpponent.TabIndex = 3;
             this.lblOpponent.Text = "Поле противника";
-
             // 
             // btnNewGame
             // 
@@ -85,30 +80,30 @@
             this.btnNewGame.TabIndex = 4;
             this.btnNewGame.Text = "Новая игра";
             this.btnNewGame.UseVisualStyleBackColor = true;
-
             // 
-            // chkTwoPlayers
+            // statusLabel
             // 
-            this.chkTwoPlayers.AutoSize = true;
-            this.chkTwoPlayers.Location = new System.Drawing.Point(130, 368);
-            this.chkTwoPlayers.Name = "chkTwoPlayers";
-            this.chkTwoPlayers.Size = new System.Drawing.Size(85, 19);
-            this.chkTwoPlayers.TabIndex = 5;
-            this.chkTwoPlayers.Text = "2 игрока";
-            this.chkTwoPlayers.UseVisualStyleBackColor = true;
-
+            this.statusLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.statusLabel.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.statusLabel.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.statusLabel.Location = new System.Drawing.Point(0, 400);
+            this.statusLabel.Name = "statusLabel";
+            this.statusLabel.Size = new System.Drawing.Size(670, 25);
+            this.statusLabel.TabIndex = 5;
+            this.statusLabel.Text = "Готов к игре";
+            this.statusLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(670, 410);
-            this.Controls.Add(this.chkTwoPlayers);
+            this.ClientSize = new System.Drawing.Size(670, 425);
             this.Controls.Add(this.btnNewGame);
             this.Controls.Add(this.lblOpponent);
             this.Controls.Add(this.pnlOpponent);
             this.Controls.Add(this.lblPlayer);
             this.Controls.Add(this.pnlPlayer);
+            this.Controls.Add(this.statusLabel);
             this.Font = new System.Drawing.Font("Microsoft Sans Serif", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
@@ -126,6 +121,6 @@
         private System.Windows.Forms.Panel pnlOpponent;
         private System.Windows.Forms.Label lblOpponent;
         private System.Windows.Forms.Button btnNewGame;
-        private System.Windows.Forms.CheckBox chkTwoPlayers;
+        private System.Windows.Forms.Label statusLabel;
     }
 }
