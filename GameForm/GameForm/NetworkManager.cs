@@ -11,13 +11,12 @@ namespace Battleship
         private TcpClient _client;
         private TcpListener _server;
         private NetworkStream _stream;
-        private bool _isHost;
-        public event Action<string> OnMessageReceived;
         private Thread _listenThread;
+
+        public event Action<string> OnMessageReceived;
 
         public NetworkManager(string ip, bool isHost)
         {
-            _isHost = isHost;
             if (isHost)
             {
                 _server = new TcpListener(IPAddress.Any, 5000);
@@ -38,7 +37,7 @@ namespace Battleship
             _listenThread = new Thread(() =>
             {
                 byte[] buffer = new byte[1024];
-                while (_client.Connected)
+                while (_client?.Connected == true)
                 {
                     try
                     {
@@ -57,7 +56,7 @@ namespace Battleship
 
         public void SendMove(int x, int y)
         {
-            if (!_client.Connected) return;
+            if (!_client?.Connected == true) return;
             string message = $"MOVE:{x},{y}";
             byte[] data = Encoding.UTF8.GetBytes(message);
             _stream.Write(data, 0, data.Length);
@@ -65,12 +64,13 @@ namespace Battleship
 
         public void SendResult(bool isHit)
         {
-            if (!_client.Connected) return;
+            if (!_client?.Connected == true) return;
             string message = $"RESULT:{isHit}";
             byte[] data = Encoding.UTF8.GetBytes(message);
             _stream.Write(data, 0, data.Length);
         }
 
+        // ✅ ТОЛЬКО ОДИН Disconnect
         public void Disconnect()
         {
             try
@@ -80,6 +80,10 @@ namespace Battleship
                 _server?.Stop();
             }
             catch { }
+            // Очищаем ссылки
+            _stream = null;
+            _client = null;
+            _server = null;
         }
     }
 }

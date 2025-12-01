@@ -12,27 +12,31 @@ namespace Battleship
         private Board enemyBoard = new Board();
         private Button[,] myButtons = new Button[10, 10];
         private Button[,] enemyButtons = new Button[10, 10];
-        private GameState state;
+        private GameState state = GameState.PlayerTurn;
         private NetworkManager _network;
         private bool _isOnline;
         private bool _isHost;
         private bool _isMyTurn = true;
         private object lastMoveTag;
 
-        // Конструктор с параметрами
-        public Form1(bool isTwoPlayers, bool isOnline, string ip, bool isHost)
+        public Form1(bool isTwoPlayers, bool isOnline, string ip, bool isHost, NetworkManager network = null)
         {
-            InitializeComponent(); // ⬅️ ОБЯЗАТЕЛЬНО вызываем!
+            InitializeComponent();
             _isOnline = isOnline;
             _isHost = isHost;
-
-            // Устанавливаем начальный текст статуса (statusLabel уже существует!)
-            statusLabel.Text = "Инициализация...";
+            _network = network;
 
             if (_isOnline)
             {
+                if (_network == null)
+                {
+                    MessageBox.Show("Ошибка: сетевое соединение не установлено.");
+                    Close();
+                    return;
+                }
+
                 Text = _isHost ? "Морской бой — Хост" : "Морской бой — Клиент";
-                Task.Run(() => SetupNetwork(ip));
+                SetupGameAfterConnection();
             }
             else
             {
@@ -43,37 +47,19 @@ namespace Battleship
             btnNewGame.Click += (s, e) => NewGame();
         }
 
-        private async void SetupNetwork(string ip)
+        private void SetupGameAfterConnection()
         {
-            try
-            {
-                Invoke((MethodInvoker)delegate { statusLabel.Text = _isHost ? "Ожидание подключения..." : $"Подключение к {ip}..."; });
-
-                _network = new NetworkManager(ip, _isHost);
-                _network.OnMessageReceived += ProcessNetworkMessage;
-
-                myBoard.PlaceShipsRandomly();
-                await Task.Delay(500);
-
-                _isMyTurn = _isHost; // Хост ходит первым
-                Invoke((MethodInvoker)delegate
-                {
-                    SetupGamePanels();
-                    statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
-                });
-            }
-            catch (Exception ex)
-            {
-                Invoke((MethodInvoker)delegate
-                {
-                    MessageBox.Show($"Ошибка подключения: {ex.Message}");
-                    Close();
-                });
-            }
+            myBoard.PlaceShipsRandomly();
+            _isMyTurn = _isHost;
+            SetupGamePanels();
+            statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
+            _network.OnMessageReceived += ProcessNetworkMessage;
         }
 
         private void ProcessNetworkMessage(string message)
         {
+            if (IsDisposed || Disposing) return;
+
             if (message.StartsWith("MOVE:"))
             {
                 string[] coords = message.Substring(5).Split(',');
@@ -90,29 +76,27 @@ namespace Battleship
                     return;
                 }
 
-                _isMyTurn = !hit;
-                Invoke((MethodInvoker)delegate
-                {
+                _isMyTurn = !hit; // ← ИСПРАВЛЕНО: было _isMyToTurn
+                if (!IsDisposed)
                     statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
-                });
             }
             else if (message.StartsWith("RESULT:"))
             {
                 bool hit = bool.Parse(message.Substring(7));
-                string[] parts = lastMoveTag.ToString().Split(',');
-                int x = int.Parse(parts[0]);
-                int y = int.Parse(parts[1]);
+                if (lastMoveTag != null)
+                {
+                    string[] parts = lastMoveTag.ToString().Split(',');
+                    int x = int.Parse(parts[0]);
+                    int y = int.Parse(parts[1]);
 
-                if (hit)
-                    enemyBoard.Grid[x, y] = true; // Отмечаем попадание
+                    if (hit)
+                        enemyBoard.Grid[x, y] = true;
+                }
 
                 _isMyTurn = hit;
                 UpdateUI();
-
-                Invoke((MethodInvoker)delegate
-                {
+                if (!IsDisposed)
                     statusLabel.Text = _isMyTurn ? "Ваш ход!" : "Ход противника...";
-                });
             }
         }
 
@@ -165,18 +149,18 @@ namespace Battleship
 
         private void UpdateUI()
         {
+            if (IsDisposed) return;
+
             for (int i = 0; i < 10; i++)
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    // Моё поле
                     Button myBtn = myButtons[i, j];
                     if (myBoard.Shots[i, j])
                         myBtn.BackColor = myBoard.Grid[i, j] ? Color.Red : Color.LightBlue;
                     else
                         myBtn.BackColor = myBoard.Grid[i, j] ? Color.DarkGray : SystemColors.Control;
 
-                    // Поле противника
                     Button enemyBtn = enemyButtons[i, j];
                     if (enemyBoard.Shots[i, j])
                         enemyBtn.BackColor = enemyBoard.Grid[i, j] ? Color.Red : Color.LightBlue;
@@ -186,7 +170,7 @@ namespace Battleship
             }
         }
 
-        private void MyCellClick(object sender, EventArgs e) { /* нельзя стрелять по своему полю */ }
+        private void MyCellClick(object sender, EventArgs e) { }
 
         private void EnemyCellClick(object sender, EventArgs e)
         {
@@ -255,7 +239,6 @@ namespace Battleship
             }
             else
             {
-                // Дополнительный ход
                 System.Threading.Thread.Sleep(300);
                 ComputerTurn();
             }
@@ -263,7 +246,9 @@ namespace Battleship
 
         private void EndGame(bool isPlayerWinner)
         {
+            if (state == GameState.GameOver) return;
             state = GameState.GameOver;
+
             string message = _isOnline
                 ? (isPlayerWinner ? "Вы победили!" : "Победил противник!")
                 : (isPlayerWinner ? "Вы победили!" : "Победил компьютер!");
