@@ -1,3 +1,4 @@
+﻿
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
@@ -13,6 +14,7 @@ namespace Battleship
         private NetworkStream _stream;
         private Thread _listenThread;
         private bool _isConnected = false;
+        private bool _isListening = false;
 
         public event Action<string> OnMessageReceived;
 
@@ -22,109 +24,152 @@ namespace Battleship
             {
                 if (isHost)
                 {
-                    // Хост создает сервер
+                    Console.WriteLine("Хост: Пытаюсь запустить сервер...");
+
+                    // ✅ Пробуем создать сервер
                     _server = new TcpListener(IPAddress.Any, 5000);
                     _server.Start();
-                    Console.WriteLine("Хост: Ожидаем подключения клиента...");
 
-                    // Асинхронно ждем подключения
+                    Console.WriteLine("Хост: Сервер запущен, жду подключения...");
+
+                    // ✅ Ждем подключение клиента (без таймаута, чтобы не выбрасывать исключение)
                     _client = _server.AcceptTcpClient();
-                    Console.WriteLine("Хост: Клиент подключен!");
+
+                    Console.WriteLine("Хост: Клиент подключен успешно!");
                 }
                 else
                 {
-                    // Клиент подключается к хосту
-                    Console.WriteLine($"Клиент: Подключаемся к {ip}:5000");
+                    Console.WriteLine($"Клиент: Пытаюсь подключиться к {ip}:5000...");
+
+                    // ✅ Пробуем подключиться к хосту
                     _client = new TcpClient();
                     _client.Connect(ip, 5000);
-                    Console.WriteLine("Клиент: Подключение установлено!");
+
+                    Console.WriteLine("Клиент: Подключение установлено успешно!");
                 }
 
                 _stream = _client.GetStream();
                 _isConnected = true;
+
+                Console.WriteLine($"Сетевое соединение установлено: isHost={isHost}");
+
                 StartListening();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка подключения: {ex.Message}");
+                Console.WriteLine($"ОШИБКА в NetworkManager: {ex.Message}");
+                _isConnected = false;
+
+                // ✅ НЕ выбрасываем исключение наружу, просто отмечаем что не подключились
                 Disconnect();
             }
         }
 
         private void StartListening()
         {
+            if (!_isConnected) return;
+
             _listenThread = new Thread(() =>
             {
-                byte[] buffer = new byte[1024];
-                while (_isConnected && _client != null && _client.Connected)
+                _isListening = true;
+
+                try
                 {
-                    try
+                    byte[] buffer = new byte[1024];
+
+                    while (_isConnected && _client != null && _client.Connected && _isListening)
                     {
-                        int bytesRead = _stream.Read(buffer, 0, buffer.Length);
-                        if (bytesRead == 0)
+                        try
                         {
-                            Console.WriteLine("Соединение разорвано");
+                            if (_stream.DataAvailable)
+                            {
+                                int bytesRead = _stream.Read(buffer, 0, buffer.Length);
+                                if (bytesRead > 0)
+                                {
+                                    string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                                    Console.WriteLine($"Получено сообщение: {message}");
+                                    OnMessageReceived?.Invoke(message);
+                                }
+                            }
+                            else
+                            {
+                                Thread.Sleep(50);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Ошибка чтения из потока: {ex.Message}");
                             break;
                         }
-
-                        string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                        Console.WriteLine($"Получено сообщение: {message}");
-                        OnMessageReceived?.Invoke(message);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Ошибка чтения: {ex.Message}");
-                        break;
                     }
                 }
-                Disconnect();
+                finally
+                {
+                    Disconnect();
+                }
             });
+
             _listenThread.IsBackground = true;
             _listenThread.Start();
         }
 
-        public void SendMessage(string message)
+        public bool SendMove(int x, int y)
+        {
+            return SendMessage($"MOVE:{x},{y}");
+        }
+
+        public bool SendResult(bool isHit)
+        {
+            return SendMessage($"RESULT:{isHit}");
+        }
+
+        private bool SendMessage(string message)
         {
             if (!_isConnected || _client == null || !_client.Connected)
             {
-                Console.WriteLine($"Не удалось отправить сообщение: {message} - нет соединения");
-                return;
+                Console.WriteLine($"Нет соединения для отправки: {message}");
+                return false;
             }
 
             try
             {
+                if (_stream == null || !_stream.CanWrite)
+                {
+                    Console.WriteLine($"Поток не доступен для записи: {message}");
+                    return false;
+                }
+
                 byte[] data = Encoding.UTF8.GetBytes(message);
                 _stream.Write(data, 0, data.Length);
-                Console.WriteLine($"Отправлено сообщение: {message}");
+                Console.WriteLine($"Сообщение отправлено: {message}");
+                return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка отправки: {ex.Message}");
-                Disconnect();
+                return false;
             }
-        }
-
-        public void SendMove(int x, int y)
-        {
-            SendMessage($"MOVE:{x},{y}");
-        }
-
-        public void SendResult(bool isHit)
-        {
-            SendMessage($"RESULT:{isHit}");
         }
 
         public void Disconnect()
         {
             try
             {
+                _isListening = false;
                 _isConnected = false;
+
                 _stream?.Close();
                 _client?.Close();
                 _server?.Stop();
-                Console.WriteLine("Соединение разорвано");
+
+                Console.WriteLine("Соединение закрыто");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при разрыве соединения: {ex.Message}");
+            }
         }
+
+        public bool IsConnected => _isConnected && _client != null && _client.Connected;
     }
 }

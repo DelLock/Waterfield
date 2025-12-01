@@ -4,6 +4,9 @@
     <Compile Update="Form1.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Update="GradientPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Update="LobbyForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -12,6 +15,9 @@
     </Compile>
     <Compile Update="OnlineMenuForm.cs">
       <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="RoundedButton.cs">
+      <SubType>Component</SubType>
     </Compile>
   </ItemGroup>
 </Project>
