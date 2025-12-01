@@ -1,0 +1,16 @@
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.csproj.GenerateResource.cache
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.AssemblyInfoInputs.cache
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.AssemblyInfo.cs
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.csproj.CoreCompileInputs.cache
+C:\Users\Denis\source\repos\GameForm\GameForm\bin\Debug\net8.0-windows\GameForm.exe
+C:\Users\Denis\source\repos\GameForm\GameForm\bin\Debug\net8.0-windows\GameForm.deps.json
+C:\Users\Denis\source\repos\GameForm\GameForm\bin\Debug\net8.0-windows\GameForm.runtimeconfig.json
+C:\Users\Denis\source\repos\GameForm\GameForm\bin\Debug\net8.0-windows\GameForm.dll
+C:\Users\Denis\source\repos\GameForm\GameForm\bin\Debug\net8.0-windows\GameForm.pdb
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\Battleship.Form1.resources
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.dll
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\refint\GameForm.dll
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.pdb
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\GameForm.genruntimeconfig.cache
+C:\Users\Denis\source\repos\GameForm\GameForm\obj\Debug\net8.0-windows\ref\GameForm.dll
