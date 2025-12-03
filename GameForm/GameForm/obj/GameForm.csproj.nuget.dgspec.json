@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Denis\\source\\repos\\GameForm\\GameForm\\GameForm.csproj": {}
+    "C:\\Users\\ASUS\\source\\repos\\GameForm\\GameForm\\GameForm.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Denis\\source\\repos\\GameForm\\GameForm\\GameForm.csproj": {
+    "C:\\Users\\ASUS\\source\\repos\\GameForm\\GameForm\\GameForm.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Denis\\source\\repos\\GameForm\\GameForm\\GameForm.csproj",
+        "projectUniqueName": "C:\\Users\\ASUS\\source\\repos\\GameForm\\GameForm\\GameForm.csproj",
         "projectName": "GameForm",
-        "projectPath": "C:\\Users\\Denis\\source\\repos\\GameForm\\GameForm\\GameForm.csproj",
-        "packagesPath": "C:\\Users\\Denis\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Denis\\source\\repos\\GameForm\\GameForm\\obj\\",
+        "projectPath": "C:\\Users\\ASUS\\source\\repos\\GameForm\\GameForm\\GameForm.csproj",
+        "packagesPath": "C:\\Users\\ASUS\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\ASUS\\source\\repos\\GameForm\\GameForm\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\Denis\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\ASUS\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],

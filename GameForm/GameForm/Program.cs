@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows.Forms;
 
 namespace Battleship
@@ -10,7 +10,21 @@ namespace Battleship
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new MainMenuForm());
+            bool menuExists = false;
+            foreach (Form form in Application.OpenForms)
+            {
+                if (form is MainMenuForm)
+                {
+                    menuExists = true;
+                    form.BringToFront();
+                    break;
+                }
+            }
+
+            if (!menuExists)
+            {
+                Application.Run(new MainMenuForm());
+            }
         }
     }
 }

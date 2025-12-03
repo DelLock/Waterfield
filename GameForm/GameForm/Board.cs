@@ -5,7 +5,7 @@ public class Board
     public bool[,] Grid { get; private set; }      // Где стоят корабли
     public bool[,] Shots { get; private set; }     // Где стреляли
     public int TotalShipCells { get; private set; }
-    public int HitCells { get; private set; }
+    public int HitCells { get; set; }              // ✅ Изменили на public set
 
     public Board()
     {
@@ -26,7 +26,7 @@ public class Board
             bool placed = false;
             int attempts = 0;
 
-            while (!placed && attempts < 100) // Добавляем ограничение попыток
+            while (!placed && attempts < 100)
             {
                 int x = rand.Next(10);
                 int y = rand.Next(10);
@@ -43,7 +43,6 @@ public class Board
 
             if (!placed)
             {
-                // Если не удалось разместить корабль, начинаем заново
                 ClearBoard();
                 TotalShipCells = 0;
                 PlaceShipsRandomly();
@@ -62,17 +61,14 @@ public class Board
 
     private bool CanPlaceShip(int x, int y, int size, bool isHorizontal)
     {
-        // Проверка выхода за границы
         if (isHorizontal)
         {
             if (y + size > 10) return false;
 
-            // Проверка всех клеток корабля и вокруг них
             for (int i = 0; i < size; i++)
             {
                 int checkY = y + i;
 
-                // Проверяем саму клетку и соседние
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     for (int dy = -1; dy <= 1; dy++)
@@ -93,12 +89,10 @@ public class Board
         {
             if (x + size > 10) return false;
 
-            // Проверка всех клеток корабля и вокруг них
             for (int i = 0; i < size; i++)
             {
                 int checkX = x + i;
 
-                // Проверяем саму клетку и соседние
                 for (int dx = -1; dx <= 1; dx++)
                 {
                     for (int dy = -1; dy <= 1; dy++)
