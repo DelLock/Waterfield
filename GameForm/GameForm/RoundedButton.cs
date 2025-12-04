@@ -62,7 +62,6 @@ namespace Battleship
             using (Pen penBorder = new Pen(BorderColor, BorderSize))
             {
                 penBorder.Alignment = PenAlignment.Inset;
-
                 Region = new Region(pathSurface);
                 graphics.DrawPath(penSurface, pathSurface);
 

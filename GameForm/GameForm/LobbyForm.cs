@@ -1,6 +1,5 @@
-﻿﻿using System;
+﻿using System;
 using System.Drawing;
-using System.Net;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 
@@ -10,9 +9,13 @@ namespace Battleship
     {
         private NetworkManager _network;
         private bool _isReady = false;
+        private GameLobbyHost _lobbyHost;
+        private string _localIp;
+        private bool _connectionAttempted = false;
 
         public LobbyForm(string localIp)
         {
+            _localIp = localIp;
             this.Text = "Комната ожидания";
             this.Size = new Size(500, 300);
             this.StartPosition = FormStartPosition.CenterScreen;
@@ -48,7 +51,7 @@ namespace Battleship
 
             Label lblIp = new Label
             {
-                Text = $"Ваш IP для подключения:\n{localIp}",
+                Text = $"Ваш IP для подключения:\n{_localIp}",
                 Font = new Font("Consolas", 11, FontStyle.Bold),
                 ForeColor = Color.FromArgb(25, 25, 112),
                 Location = new Point(20, 120),
@@ -80,53 +83,74 @@ namespace Battleship
 
             this.Controls.Add(contentPanel);
 
-            // Запуск сервера в фоне
-            Task.Run(() => StartHostServer());
+            StartAdvertising();
+            StartHostServer();
+        }
+
+        private void StartAdvertising()
+        {
+            _lobbyHost = new GameLobbyHost();
+            _lobbyHost.StartAdvertising(Program.CurrentPlayer.Nickname, _localIp);
         }
 
         private void StartHostServer()
         {
-            try
+            Task.Run(() =>
             {
-                Console.WriteLine("LobbyForm: Начинаю создание хоста...");
-
-                _network = new NetworkManager("0.0.0.0", isHost: true);
-
-                Console.WriteLine("LobbyForm: Хост успешно создан!");
-
-                Invoke(new Action(() =>
+                try
                 {
-                    MessageBox.Show("✅ Игрок присоединился! Игра начинается...",
-                        "Готово", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    _isReady = true;
+                    _network = new NetworkManager("0.0.0.0", isHost: true);
+                    _connectionAttempted = true;
 
-                    this.DialogResult = DialogResult.OK;
-                    Close();
-                }));
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"LobbyForm: Ошибка создания хоста: {ex.Message}");
-
-                Invoke(new Action(() =>
+                    this.Invoke(new Action(() =>
+                    {
+                        if (!this.IsDisposed)
+                        {
+                            _isReady = true;
+                            this.DialogResult = DialogResult.OK;
+                            this.Close();
+                        }
+                    }));
+                }
+                catch (Exception ex)
                 {
-                    MessageBox.Show($"❌ Ошибка создания игры: {ex.Message}\n\nПроверьте:\n1. Порт 5000 не занят\n2. Брандмауэр разрешает подключения",
-                        "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    _isReady = false;
-
-                    Close();
-                }));
-            }
+                    _connectionAttempted = true;
+                    this.Invoke(new Action(() =>
+                    {
+                        if (!this.IsDisposed)
+                        {
+                            MessageBox.Show($"❌ Ошибка создания игры: {ex.Message}\n\nПроверьте:\n1. Порт 5000 не занят\n2. Брандмауэр разрешает подключения",
+                                "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            _isReady = false;
+                            this.Close();
+                        }
+                    }));
+                }
+            });
         }
 
-        public NetworkManager GetNetwork() => _isReady ? _network : null;
+        public NetworkManager GetNetwork()
+        {
+            if (_isReady && _network != null && _network.IsConnected)
+                return _network;
+            return null;
+        }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (!_isReady)
+            _lobbyHost?.StopAdvertising();
+
+            if (!_connectionAttempted)
             {
-                _network?.Disconnect();
+                e.Cancel = true;
+                return;
             }
+
+            if (!_isReady && _network != null)
+            {
+                _network.Disconnect();
+            }
+
             base.OnFormClosing(e);
         }
     }

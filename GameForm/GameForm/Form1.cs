@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
-    
+
 namespace Battleship
 {
     public partial class Form1 : Form
@@ -67,8 +67,6 @@ namespace Battleship
             }
 
             _network.OnMessageReceived += ProcessNetworkMessage;
-
-            // Хост начинает первым
             _isMyTurn = _isHost;
 
             if (_isHost)
@@ -90,26 +88,20 @@ namespace Battleship
             this.Invoke(new Action(() => {
                 try
                 {
-                    Console.WriteLine($"Получено сообщение: {message}");
-
                     if (message.StartsWith("MOVE:"))
                     {
-                        // Противник сделал ход
                         string[] coords = message.Substring(5).Split(',');
                         int x = int.Parse(coords[0]);
                         int y = int.Parse(coords[1]);
 
-                        // МГНОВЕННО ПОКАЗЫВАЕМ РЕЗУЛЬТАТ НА НАШЕМ ПОЛЕ
                         bool hit = myBoard.FireAt(x, y);
                         UpdateUI();
                         UpdateShipsInfo();
 
-                        // ПОКАЗЫВАЕМ РЕЗУЛЬТАТ В СТАТУСЕ
                         statusLabel.Text = hit ?
                             $"🔥 Противник попал в ({x},{y})!" :
                             $"💨 Противник промахнулся в ({x},{y})!";
 
-                        // Отправляем результат противнику
                         _network.SendResult(hit);
 
                         if (myBoard.IsAllShipsSunk())
@@ -118,14 +110,12 @@ namespace Battleship
                             return;
                         }
 
-                        // После выстрела противника - наш ход
                         _isMyTurn = true;
                         statusLabel.Text += " Ваш ход!";
                         EnableEnemyButtons(true);
                     }
                     else if (message.StartsWith("RESULT:"))
                     {
-                        // Получили результат нашего выстрела
                         bool hit = bool.Parse(message.Substring(7));
 
                         if (lastMoveTag != null)
@@ -134,19 +124,14 @@ namespace Battleship
                             int x = int.Parse(parts[0]);
                             int y = int.Parse(parts[1]);
 
-                            // ✅ ИСПРАВЛЕНИЕ: Запоминаем реальный результат
                             enemyHitMap[x, y] = hit;
-
-                            // Обновляем UI
                             UpdateUI();
                             UpdateShipsInfo();
 
-                            // Показываем окончательный результат
                             statusLabel.Text = hit ?
                                 $"🎯 Вы попали в ({x},{y})!" :
                                 $"🌊 Вы промахнулись в ({x},{y})!";
 
-                            // Проверяем победу
                             if (_isOnline && CheckOnlineWinCondition())
                             {
                                 EndGame(true);
@@ -154,17 +139,14 @@ namespace Battleship
                             }
                         }
 
-                        // Решаем, кто ходит дальше
                         if (hit)
                         {
-                            // Попали - продолжаем ход
                             _isMyTurn = true;
                             statusLabel.Text += " Стреляйте снова!";
                             EnableEnemyButtons(true);
                         }
                         else
                         {
-                            // Промахнулись - ход противника
                             _isMyTurn = false;
                             statusLabel.Text += " Ход противника...";
                             EnableEnemyButtons(false);
@@ -172,17 +154,13 @@ namespace Battleship
                     }
                     else if (message == "DISCONNECT")
                     {
-                        // Противник отключился
                         _opponentDisconnected = true;
                         MessageBox.Show("⚠️ Противник отключился от игры.", "Отключение",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         ReturnToMenu();
                     }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Ошибка обработки сообщения: {ex.Message}");
-                }
+                catch { }
             }));
         }
 
@@ -196,7 +174,6 @@ namespace Battleship
                     if (enemyHitMap[i, j]) totalHits++;
                 }
             }
-
             return totalHits >= 20;
         }
 
@@ -284,7 +261,6 @@ namespace Battleship
             {
                 for (int j = 0; j < 10; j++)
                 {
-                    // Моё поле
                     RoundedButton myBtn = myButtons[i, j];
                     if (myBoard.Shots[i, j])
                     {
@@ -299,31 +275,23 @@ namespace Battleship
                             Color.FromArgb(220, 240, 255);
                     }
 
-                    // Поле противника
                     RoundedButton enemyBtn = enemyButtons[i, j];
 
-                    // ✅ ИСПРАВЛЕНИЕ: Правильная логика отображения
                     if (enemyBoard.Shots[i, j])
                     {
-                        // Если стреляли в эту клетку
                         if (_isOnline)
                         {
-                            // В онлайн-режине используем enemyHitMap
                             if (enemyHitMap[i, j])
                             {
-                                enemyBtn.BackColor = Color.FromArgb(255, 100, 100); // Красный - попадание
+                                enemyBtn.BackColor = Color.FromArgb(255, 100, 100);
                             }
                             else
                             {
-                                // Проверяем, есть ли запись в enemyHitMap
-                                // Если enemyHitMap[i,j] = false - это подтвержденный промах
-                                // Если enemyHitMap не установлен - это ожидание результата
-                                enemyBtn.BackColor = Color.FromArgb(200, 200, 240); // Серо-синий - ожидание
+                                enemyBtn.BackColor = Color.FromArgb(200, 200, 240);
                             }
                         }
                         else
                         {
-                            // Офлайн-режим: проверяем по enemyBoard.Grid
                             enemyBtn.BackColor = enemyBoard.Grid[i, j] ?
                                 Color.FromArgb(255, 100, 100) :
                                 Color.FromArgb(180, 220, 255);
@@ -331,7 +299,7 @@ namespace Battleship
                     }
                     else
                     {
-                        enemyBtn.BackColor = Color.FromArgb(240, 248, 255); // Светлый фон - не стреляли
+                        enemyBtn.BackColor = Color.FromArgb(240, 248, 255);
                     }
                 }
             }
@@ -382,7 +350,6 @@ namespace Battleship
                 return;
             }
 
-            // Сохраняем координаты выстрела
             lastMoveTag = $"{x},{y}";
 
             if (_isOnline)
@@ -396,30 +363,21 @@ namespace Battleship
                     return;
                 }
 
-                // ✅ ИСПРАВЛЕНИЕ: Отмечаем выстрел и ОБНОВЛЯЕМ UI
                 enemyBoard.Shots[x, y] = true;
-                // enemyHitMap[x,y] НЕ устанавливаем - ждем результат от сервера
-
-                // ✅ ОБНОВЛЯЕМ UI СРАЗУ - клетка станет серо-синей
                 UpdateUI();
                 UpdateShipsInfo();
-
-                // ✅ ПОКАЗЫВАЕМ СТАТУС
                 statusLabel.Text = $"🎯 Выстрел в ({x},{y})... Ожидание результата";
 
-                // Отправляем ход противнику
                 bool sent = _network.SendMove(x, y);
 
                 if (sent)
                 {
-                    // Блокируем кнопки до получения результата
                     _isMyTurn = false;
                     EnableEnemyButtons(false);
                 }
                 else
                 {
                     statusLabel.Text = "❌ Ошибка отправки хода!";
-                    // Откатываем изменения если не отправилось
                     enemyBoard.Shots[x, y] = false;
                     UpdateUI();
                     _isMyTurn = true;
@@ -427,16 +385,11 @@ namespace Battleship
             }
             else
             {
-                // ✅ ОФФЛАЙН ИГРА - СРАЗУ ПРОВЕРЯЕМ ПОПАДАНИЕ
                 bool hit = enemyBoard.FireAt(x, y);
-                enemyHitMap[x, y] = hit; // ✅ Запоминаем результат
+                enemyHitMap[x, y] = hit;
                 enemyBoard.Shots[x, y] = true;
-
-                // ✅ ОБНОВЛЯЕМ UI СРАЗУ
                 UpdateUI();
                 UpdateShipsInfo();
-
-                // ✅ ПОКАЗЫВАЕМ РЕЗУЛЬТАТ СРАЗУ
                 statusLabel.Text = hit ?
                     $"🎯 Попадание в ({x},{y})! Стреляйте снова!" :
                     $"💨 Промах в ({x},{y})! Ход компьютера...";
@@ -469,9 +422,7 @@ namespace Battleship
                 y = rand.Next(10);
             } while (myBoard.Shots[x, y]);
 
-            // ✅ КОМПЬЮТЕР - СРАЗУ ПОКАЗЫВАЕМ РЕЗУЛЬТАТ
             bool hit = myBoard.FireAt(x, y);
-
             UpdateUI();
             UpdateShipsInfo();
 
@@ -512,12 +463,9 @@ namespace Battleship
                 isPlayerWinner ? MessageBoxIcon.Information : MessageBoxIcon.Exclamation);
 
             _network?.Disconnect();
-
             EnableEnemyButtons(false);
-
             statusLabel.Text = "🏁 Игра завершена!";
 
-            // Указываем полное имя для Timer
             System.Windows.Forms.Timer returnTimer = new System.Windows.Forms.Timer();
             returnTimer.Interval = 2000;
             returnTimer.Tick += (s, e) => {
@@ -532,8 +480,6 @@ namespace Battleship
             if (IsDisposed || Disposing) return;
 
             _network?.Disconnect();
-
-            // Находим главное меню
             Form mainMenu = Application.OpenForms["MainMenuForm"];
             if (mainMenu != null)
             {
@@ -542,7 +488,6 @@ namespace Battleship
             }
             else
             {
-                // Если меню не найдено, создаем новое
                 this.Hide();
                 new MainMenuForm().Show();
                 this.Close();
@@ -551,7 +496,6 @@ namespace Battleship
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            // Если игрок выходит во время онлайн-игры, уведомляем противника
             if (_isOnline && _network != null && _network.IsConnected && !_opponentDisconnected)
             {
                 try

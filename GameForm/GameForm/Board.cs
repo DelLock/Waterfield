@@ -2,10 +2,10 @@
 
 public class Board
 {
-    public bool[,] Grid { get; private set; }      // Где стоят корабли
-    public bool[,] Shots { get; private set; }     // Где стреляли
+    public bool[,] Grid { get; private set; }
+    public bool[,] Shots { get; private set; }
     public int TotalShipCells { get; private set; }
-    public int HitCells { get; set; }              // ✅ Изменили на public set
+    public int HitCells { get; set; }
 
     public Board()
     {

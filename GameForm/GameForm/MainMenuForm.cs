@@ -14,8 +14,6 @@ namespace Battleship
             this.FormBorderStyle = FormBorderStyle.FixedSingle;
             this.MaximizeBox = false;
             this.BackColor = Color.FromArgb(240, 248, 255);
-
-            // ✅ Устанавливаем имя формы для поиска
             this.Name = "MainMenuForm";
 
             Panel backgroundPanel = new Panel

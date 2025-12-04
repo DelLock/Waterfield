@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -23,43 +23,23 @@ namespace Battleship
             {
                 if (isHost)
                 {
-                    Console.WriteLine("Хост: Пытаюсь запустить сервер...");
-
-                    // ✅ Пробуем создать сервер
                     _server = new TcpListener(IPAddress.Any, 5000);
                     _server.Start();
-
-                    Console.WriteLine("Хост: Сервер запущен, жду подключения...");
-
-                    // ✅ Ждем подключение клиента (без таймаута, чтобы не выбрасывать исключение)
                     _client = _server.AcceptTcpClient();
-
-                    Console.WriteLine("Хост: Клиент подключен успешно!");
                 }
                 else
                 {
-                    Console.WriteLine($"Клиент: Пытаюсь подключиться к {ip}:5000...");
-
-                    // ✅ Пробуем подключиться к хосту
                     _client = new TcpClient();
                     _client.Connect(ip, 5000);
-
-                    Console.WriteLine("Клиент: Подключение установлено успешно!");
                 }
 
                 _stream = _client.GetStream();
                 _isConnected = true;
-
-                Console.WriteLine($"Сетевое соединение установлено: isHost={isHost}");
-
                 StartListening();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"ОШИБКА в NetworkManager: {ex.Message}");
                 _isConnected = false;
-
-                // ✅ НЕ выбрасываем исключение наружу, просто отмечаем что не подключились
                 Disconnect();
             }
         }
@@ -71,11 +51,9 @@ namespace Battleship
             _listenThread = new Thread(() =>
             {
                 _isListening = true;
-
                 try
                 {
                     byte[] buffer = new byte[1024];
-
                     while (_isConnected && _client != null && _client.Connected && _isListening)
                     {
                         try
@@ -86,7 +64,6 @@ namespace Battleship
                                 if (bytesRead > 0)
                                 {
                                     string message = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                                    Console.WriteLine($"Получено сообщение: {message}");
                                     OnMessageReceived?.Invoke(message);
                                 }
                             }
@@ -95,9 +72,8 @@ namespace Battleship
                                 Thread.Sleep(50);
                             }
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            Console.WriteLine($"Ошибка чтения из потока: {ex.Message}");
                             break;
                         }
                     }
@@ -112,45 +88,22 @@ namespace Battleship
             _listenThread.Start();
         }
 
-        public bool SendMove(int x, int y)
-        {
-            return SendMessageInternal($"MOVE:{x},{y}");
-        }
-
-        public bool SendResult(bool isHit)
-        {
-            return SendMessageInternal($"RESULT:{isHit}");
-        }
-
-        public bool SendMessage(string message)
-        {
-            return SendMessageInternal(message);
-        }
+        public bool SendMove(int x, int y) => SendMessageInternal($"MOVE:{x},{y}");
+        public bool SendResult(bool isHit) => SendMessageInternal($"RESULT:{isHit}");
+        public bool SendMessage(string message) => SendMessageInternal(message);
 
         private bool SendMessageInternal(string message)
         {
-            if (!_isConnected || _client == null || !_client.Connected)
-            {
-                Console.WriteLine($"Нет соединения для отправки: {message}");
-                return false;
-            }
-
+            if (!_isConnected || _client == null || !_client.Connected) return false;
             try
             {
-                if (_stream == null || !_stream.CanWrite)
-                {
-                    Console.WriteLine($"Поток не доступен для записи: {message}");
-                    return false;
-                }
-
+                if (_stream == null || !_stream.CanWrite) return false;
                 byte[] data = Encoding.UTF8.GetBytes(message);
                 _stream.Write(data, 0, data.Length);
-                Console.WriteLine($"Сообщение отправлено: {message}");
                 return true;
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"Ошибка отправки: {ex.Message}");
                 return false;
             }
         }
@@ -161,17 +114,11 @@ namespace Battleship
             {
                 _isListening = false;
                 _isConnected = false;
-
                 _stream?.Close();
                 _client?.Close();
                 _server?.Stop();
-
-                Console.WriteLine("Соединение закрыто");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Ошибка при разрыве соединения: {ex.Message}");
-            }
+            catch { }
         }
 
         public bool IsConnected => _isConnected && _client != null && _client.Connected;
