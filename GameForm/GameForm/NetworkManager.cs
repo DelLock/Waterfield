@@ -17,30 +17,42 @@ namespace Battleship
 
         public event Action<string> OnMessageReceived;
 
-        public NetworkManager(string ip, bool isHost)
+        public NetworkManager(string ip, bool isHost, TcpClient tcpClient = null)
         {
             try
             {
                 if (isHost)
                 {
-                    _server = new TcpListener(IPAddress.Any, 5000);
-                    _server.Start();
-                    _client = _server.AcceptTcpClient();
+                    if (tcpClient != null)
+                    {
+                        _client = tcpClient;
+                        _isConnected = true;
+                        _stream = _client.GetStream();
+                    }
+                    else
+                    {
+                        _server = new TcpListener(IPAddress.Any, 5000);
+                        _server.Start();
+                        _client = _server.AcceptTcpClient();
+                        _isConnected = true;
+                        _stream = _client.GetStream();
+                    }
                 }
                 else
                 {
                     _client = new TcpClient();
                     _client.Connect(ip, 5000);
+                    _isConnected = true;
+                    _stream = _client.GetStream();
                 }
 
-                _stream = _client.GetStream();
-                _isConnected = true;
                 StartListening();
             }
-            catch
+            catch (Exception ex)
             {
                 _isConnected = false;
                 Disconnect();
+                throw new Exception($"Ошибка подключения: {ex.Message}");
             }
         }
 

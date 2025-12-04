@@ -13,6 +13,7 @@ namespace Battleship
         private string _hostName;
         private string _hostIp;
         private UdpClient _udpServer;
+        private DateTime _lastAdvertisementTime;
 
         public void StartAdvertising(string hostName, string hostIp)
         {
@@ -21,6 +22,7 @@ namespace Battleship
             _hostName = hostName;
             _hostIp = hostIp;
             _isAdvertising = true;
+            _lastAdvertisementTime = DateTime.Now;
 
             _advertisementThread = new Thread(AdvertisementWorker);
             _advertisementThread.IsBackground = true;
@@ -43,26 +45,41 @@ namespace Battleship
             try
             {
                 _udpServer = new UdpClient(5002);
-                _udpServer.Client.ReceiveTimeout = 1000;
+                _udpServer.Client.ReceiveTimeout = 100;
+                _udpServer.EnableBroadcast = true;
+
+                byte[] responseData = Encoding.UTF8.GetBytes($"BATTLESHIP_HOST:{_hostName}|{_hostIp}|Ожидание игрока");
+
+                IPEndPoint broadcastEndPoint = new IPEndPoint(IPAddress.Broadcast, 5002);
 
                 while (_isAdvertising)
                 {
                     try
                     {
-                        IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                        byte[] requestData = _udpServer.Receive(ref clientEndPoint);
-                        string request = Encoding.UTF8.GetString(requestData);
-
-                        if (request == "BATTLESHIP_DISCOVER")
+                        // Отправляем широковещательное сообщение каждые 2 секунды
+                        if ((DateTime.Now - _lastAdvertisementTime).TotalSeconds > 2)
                         {
-                            string response = $"BATTLESHIP_HOST:{_hostName}|{_hostIp}|Ожидание игрока";
-                            byte[] responseData = Encoding.UTF8.GetBytes(response);
-                            _udpServer.Send(responseData, responseData.Length, clientEndPoint);
+                            _udpServer.Send(responseData, responseData.Length, broadcastEndPoint);
+                            _lastAdvertisementTime = DateTime.Now;
+                        }
+
+                        // Проверяем входящие запросы
+                        if (_udpServer.Available > 0)
+                        {
+                            IPEndPoint clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                            byte[] requestData = _udpServer.Receive(ref clientEndPoint);
+                            string request = Encoding.UTF8.GetString(requestData);
+
+                            if (request == "BATTLESHIP_DISCOVER")
+                            {
+                                _udpServer.Send(responseData, responseData.Length, clientEndPoint);
+                                _lastAdvertisementTime = DateTime.Now;
+                            }
                         }
                     }
                     catch (SocketException ex) when (ex.SocketErrorCode == SocketError.TimedOut)
                     {
-                        Thread.Sleep(100);
+                        Thread.Sleep(50);
                     }
                     catch (ObjectDisposedException)
                     {
@@ -70,12 +87,15 @@ namespace Battleship
                     }
                     catch
                     {
-                        Thread.Sleep(100);
+                        Thread.Sleep(50);
                     }
+
+                    Thread.Sleep(100);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                // Игнорируем ошибки
             }
             finally
             {
